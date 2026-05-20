@@ -139,3 +139,10 @@ declare interface DriverCardProps {
   selected: number;
   setSelected: () => void;
 }
+
+declare interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+}

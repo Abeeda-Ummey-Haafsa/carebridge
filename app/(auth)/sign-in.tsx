@@ -15,7 +15,7 @@ import { useUserStore } from "@/store";
 const SignIn = () => {
   const { isLoaded, signIn, setActive } = useSignIn();
   const { user } = useUser();
-  const { setRole } = useUserStore();
+  const { setRole, setUser } = useUserStore();
 
   const [form, setForm] = useState({
     email: "",
@@ -42,9 +42,17 @@ const SignIn = () => {
         await setActive({ session: signInAttempt.createdSessionId });
         try {
           const userData = await fetchAPI(
-            `/(api)/user?email=${encodeURIComponent(form.email)}`
+            `/(api)/user?email=${encodeURIComponent(form.email)}`,
           );
           const userRole = userData?.data?.role || "caregiver";
+          if (userData?.data) {
+            setUser({
+              id: userData.data.id || userData.data.clerk_id,
+              name: userData.data.name,
+              email: userData.data.email,
+              role: userRole,
+            });
+          }
           setRole(userRole);
           const homeRoute = getHomeRouteByRole(userRole);
           router.replace(homeRoute as any);
@@ -90,8 +98,16 @@ const SignIn = () => {
             `/(api)/user?email=${encodeURIComponent(form.email)}`,
           );
           const userRole = userData?.data?.role || "caregiver";
+          if (userData?.data) {
+            setUser({
+              id: userData.data.id || userData.data.clerk_id,
+              name: userData.data.name,
+              email: userData.data.email,
+              role: userRole,
+            });
+          }
           // Why caregiver as the default
-          // If the API response is malformed or the role field is unexpectedly missing/null, 
+          // If the API response is malformed or the role field is unexpectedly missing/null,
           // the app still has a valid role to work with rather than breaking with undefined.
           setRole(userRole);
           const homeRoute = getHomeRouteByRole(userRole);

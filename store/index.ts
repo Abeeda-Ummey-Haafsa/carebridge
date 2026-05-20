@@ -1,14 +1,26 @@
 import { create } from "zustand";
 
-import { DriverStore, LocationStore, MarkerData, UserRole } from "@/types/type";
+import {
+  DriverStore,
+  LocationStore,
+  MarkerData,
+  UserRole,
+  User,
+} from "@/types/type";
 
 export const useUserStore = create<{
+  user: User | null;
   role: UserRole | null;
+  setUser: (user: User) => void;
   setRole: (role: UserRole) => void;
+  clearUser: () => void;
   clearRole: () => void;
 }>((set) => ({
+  user: null,
   role: null,
+  setUser: (user: User) => set({ user }),
   setRole: (role: UserRole) => set({ role }),
+  clearUser: () => set({ user: null }),
   clearRole: () => set({ role: null }),
 }));
 

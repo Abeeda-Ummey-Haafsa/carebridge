@@ -19,13 +19,15 @@ import RideCard from "@/components/RideCard";
 import { icons, images } from "@/constants";
 import { useFetch } from "@/lib/fetch";
 import { useLocationStore } from "@/store";
-import { Ride } from "@/types/type";
+import { Ride, User } from "@/types/type";
 
 const ElderHome = () => {
   const { user } = useUser();
   const { signOut } = useAuth();
 
   const { setUserLocation, setDestinationLocation } = useLocationStore();
+
+  const { data: userData } = useFetch<User>(`/(api)/user?clerkId=${user?.id}`);
 
   const handleSignOut = () => {
     signOut();
@@ -104,7 +106,7 @@ const ElderHome = () => {
           <>
             <View className="flex flex-row items-center justify-between my-5">
               <Text className="text-2xl font-JakartaExtraBold">
-                Welcome Elder👋
+                Welcome Elder {userData?.name}👋
               </Text>
               {/* <Text className="text-2xl font-JakartaExtraBold">
                 Welcome {user?.firstName}👋

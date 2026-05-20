@@ -1,29 +1,38 @@
 import arrowDown from "@/assets/icons/arrow-down.png";
 import arrowUp from "@/assets/icons/arrow-up.png";
 import backArrow from "@/assets/icons/back-arrow.png";
+import call from "@/assets/icons/call.png";
 import chat from "@/assets/icons/chat.png";
 import checkmark from "@/assets/icons/check.png";
 import close from "@/assets/icons/close.png";
 import dollar from "@/assets/icons/dollar.png";
+import edit from "@/assets/icons/edit.png";
 import email from "@/assets/icons/email.png";
 import eyecross from "@/assets/icons/eyecross.png";
 import google from "@/assets/icons/google.png";
 import home from "@/assets/icons/home.png";
+import history from "@/assets/icons/history.png";
 import list from "@/assets/icons/list.png";
 import lock from "@/assets/icons/lock.png";
+import man from "@/assets/icons/man.png";
 import map from "@/assets/icons/map.png";
 import marker from "@/assets/icons/marker.png";
+import notification from "@/assets/icons/notification.png";
 import out from "@/assets/icons/out.png";
 import person from "@/assets/icons/person.png";
 import pin from "@/assets/icons/pin.png";
 import point from "@/assets/icons/point.png";
 import profile from "@/assets/icons/profile.png";
+import profile1 from "@/assets/icons/profile1.png";
 import search from "@/assets/icons/search.png";
 import role from "@/assets/icons/role.png";
 import selectedMarker from "@/assets/icons/selected-marker.png";
+import session from "@/assets/icons/session.png";
 import star from "@/assets/icons/star.png";
 import target from "@/assets/icons/target.png";
 import to from "@/assets/icons/to.png";
+import woman from "@/assets/icons/woman.png";
+
 import check from "@/assets/images/check.png";
 import getStarted from "@/assets/images/get-started.png";
 import message from "@/assets/images/message.png";
@@ -32,6 +41,7 @@ import onboarding1 from "@/assets/images/onboarding1.jpg";
 import onboarding2 from "@/assets/images/onboarding2.jpg";
 import onboarding3 from "@/assets/images/onboarding3.jpg";
 import signUpCar from "@/assets/images/signup-car.png";
+
 
 export const images = {
   onboarding1,
@@ -48,29 +58,37 @@ export const icons = {
   arrowDown,
   arrowUp,
   backArrow,
+  call,
   chat,
   checkmark,
   close,
   dollar,
+  edit,
   email,
   eyecross,
   google,
   home,
+  history,
   list,
   lock,
+  man,
   map,
   marker,
+  notification,
   out,
   person,
   pin,
   point,
   profile,
+  profile1,
   role,
   search,
   selectedMarker,
+  session,
   star,
   target,
   to,
+  woman
 };
 
 export const onboarding = [

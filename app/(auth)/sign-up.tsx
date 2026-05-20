@@ -15,7 +15,7 @@ import { useUserStore } from "@/store";
 
 const SignUp = () => {
   const { isLoaded, signUp, setActive } = useSignUp();
-  const { setRole } = useUserStore();
+  const { setRole, setUser } = useUserStore();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [form, setForm] = useState({
@@ -57,6 +57,7 @@ const SignUp = () => {
         code: verification.code,
       });
       if (completeSignUp.status === "complete") {
+        // For Database creation
         await fetchAPI("/(api)/user", {
           method: "POST",
           body: JSON.stringify({
@@ -239,6 +240,12 @@ const SignUp = () => {
               title="Browse Home"
               onPress={async () => {
                 setShowSuccessModal(false);
+                setUser({
+                  id: form.email, // using email or clerkId
+                  name: form.name,
+                  email: form.email,
+                  role: form.role as any,
+                });
                 setRole(form.role as any);
                 const homeRoute = getHomeRouteByRole(form.role);
                 router.push(homeRoute as any);
