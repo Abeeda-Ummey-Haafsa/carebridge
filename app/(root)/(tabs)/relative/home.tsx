@@ -1,147 +1,316 @@
-import { useUser } from "@clerk/clerk-expo";
-import { useAuth } from "@clerk/clerk-expo";
-import * as Location from "expo-location";
-import { router } from "expo-router";
-import { useState, useEffect } from "react";
-import {
-  Text,
-  View,
-  TouchableOpacity,
-  Image,
-  FlatList,
-  ActivityIndicator,
-} from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Alert, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from "react-native-reanimated";
 
-import GoogleTextInput from "@/components/GoogleTextInput";
-import Map from "@/components/Map";
-import RideCard from "@/components/RideCard";
-import { icons, images } from "@/constants";
-import { useFetch } from "@/lib/fetch";
-import { useLocationStore } from "@/store";
-import { Ride, User } from "@/types/type";
+import { useUserStore } from "@/store";
+import { useRelativeDashboardStore } from "@/store/relativeDashboardStore";
 
-const RelativeHome = () => {
-  const { user } = useUser();
-  const { signOut } = useAuth();
+import DashboardHeader from "./components/DashboardHeader";
+import ActiveSessionCard from "./components/ActiveSessionCard";
+import BookingCTA from "./components/BookingCTA";
+import UpcomingBookingCard from "./components/UpcomingBookingCard";
+import ElderStatusCard from "./components/ElderStatusCard";
+import ActivityFeed from "./components/ActivityFeed";
+import EmergencyAlertCard from "./components/EmergencyAlertCard";
+import DashboardSkeleton from "./components/DashboardSkeleton";
+import {
+  ELDER_ACTIVITY_UPDATES,
+  EMERGENCY_ALERTS,
+  QUICK_CARE_OPTIONS,
+  RELATIVE_ACTIVE_SESSIONS,
+  RELATIVE_ELDERS,
+  UPCOMING_BOOKINGS,
+} from "./data";
+import { RELATIVE_COLORS, RELATIVE_LAYOUT } from "./theme";
+import {
+  RelativeEmergencyAlert,
+  RelativeBooking,
+} from "@/types/relative-dashboard";
 
-  const { setUserLocation, setDestinationLocation } = useLocationStore();
-
-  const { data: userData } = useFetch<User>(`/(api)/user?clerkId=${user?.id}`);
-
-  const handleSignOut = () => {
-    signOut();
-    router.replace("/(auth)/sign-in");
-  };
-
-  const [hasPermission, setHasPermission] = useState<boolean>(false);
-
+export default function RelativeHome() {
+  const router = useRouter();
+  const { user } = useUserStore();
   const {
-    data: recentRides,
-    loading,
-    error,
-  } = useFetch<Ride[]>(`/(api)/ride/${user?.id}`);
+    activeElderId,
+    unreadNotifications,
+    emergencyBadgeCount,
+    dashboardSummary,
+    setActiveElderId,
+    setDashboardSummary,
+  } = useRelativeDashboardStore();
+
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const scrollY = useSharedValue(0);
 
   useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setHasPermission(false);
-        return;
-      }
-
-      let location = await Location.getCurrentPositionAsync({});
-
-      const address = await Location.reverseGeocodeAsync({
-        latitude: location.coords?.latitude!,
-        longitude: location.coords?.longitude!,
-      });
-
-      setUserLocation({
-        latitude: location.coords?.latitude,
-        longitude: location.coords?.longitude,
-        address: `${address[0].name}, ${address[0].region}`,
-      });
-    })();
+    const timer = setTimeout(() => setLoading(false), 900);
+    return () => clearTimeout(timer);
   }, []);
 
-  const handleDestinationPress = (location: {
-    latitude: number;
-    longitude: number;
-    address: string;
-  }) => {
-    setDestinationLocation(location);
-    router.push("/(root)/find-ride");
-  };
+  useEffect(() => {
+    const activeSessions = RELATIVE_ACTIVE_SESSIONS.filter(
+      (session) => session.elderId === activeElderId,
+    ).length;
+    const upcomingBookings = UPCOMING_BOOKINGS.filter(
+      (booking) => booking.elderId === activeElderId,
+    ).length;
+    const liveUpdates = ELDER_ACTIVITY_UPDATES.filter(
+      (update) => update.elderId === activeElderId,
+    ).length;
+
+    setDashboardSummary({
+      activeElders: RELATIVE_ELDERS.length,
+      activeSessions,
+      upcomingBookings,
+      nearbyCaregivers: 18,
+      unreadNotifications,
+      emergencyAlerts: emergencyBadgeCount,
+      liveUpdates,
+    });
+  }, [
+    activeElderId,
+    emergencyBadgeCount,
+    setDashboardSummary,
+    unreadNotifications,
+  ]);
+
+  const selectedElder = useMemo(
+    () =>
+      RELATIVE_ELDERS.find((elder) => elder.id === activeElderId) ??
+      RELATIVE_ELDERS[0],
+    [activeElderId],
+  );
+
+  const activeSession = useMemo(
+    () =>
+      RELATIVE_ACTIVE_SESSIONS.find(
+        (session) => session.elderId === selectedElder.id,
+      ),
+    [selectedElder.id],
+  );
+
+  const filteredBookings = useMemo(
+    () =>
+      UPCOMING_BOOKINGS.filter(
+        (booking) => booking.elderId === selectedElder.id,
+      ),
+    [selectedElder.id],
+  );
+
+  const filteredUpdates = useMemo(
+    () =>
+      ELDER_ACTIVITY_UPDATES.filter(
+        (update) => update.elderId === selectedElder.id,
+      ),
+    [selectedElder.id],
+  );
+
+  const filteredAlerts = useMemo(
+    () =>
+      EMERGENCY_ALERTS.filter(
+        (alert) =>
+          alert.elderId === "all" || alert.elderId === selectedElder.id,
+      ),
+    [selectedElder.id],
+  );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1000);
+  }, []);
+
+  const switchElder = useCallback(() => {
+    const activeIndex = RELATIVE_ELDERS.findIndex(
+      (elder) => elder.id === activeElderId,
+    );
+    const nextElder =
+      RELATIVE_ELDERS[(activeIndex + 1) % RELATIVE_ELDERS.length];
+    setActiveElderId(nextElder.id);
+  }, [activeElderId, setActiveElderId]);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  const handleAction = useCallback((title: string, message: string) => {
+    Alert.alert(title, message);
+  }, []);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <DashboardSkeleton />
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView className="bg-general-500">
-      <FlatList
-        data={recentRides?.slice(0, 5)}
-        renderItem={({ item }) => <RideCard ride={item} />}
-        keyExtractor={(item, index) => index.toString()}
-        className="px-5"
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{
-          paddingBottom: 100,
-        }}
-        ListEmptyComponent={() => (
-          <View className="flex flex-col items-center justify-center">
-            {!loading ? (
-              <>
-                <Image
-                  source={images.noResult}
-                  className="w-40 h-40"
-                  alt="No recent rides found"
-                  resizeMode="contain"
-                />
-                <Text className="text-sm">No recent rides found</Text>
-              </>
-            ) : (
-              <ActivityIndicator size="small" color="#000" />
-            )}
-          </View>
-        )}
-        ListHeaderComponent={
-          <>
-            <View className="flex flex-row items-center justify-between my-5">
-              <Text className="text-2xl font-JakartaExtraBold">
-                Welcome Caregiver {userData?.name}👋
-              </Text>
-              {/* <Text className="text-2xl font-JakartaExtraBold">
-                Welcome {user?.firstName}👋
-              </Text> */}
-              <TouchableOpacity
-                onPress={handleSignOut}
-                className="justify-center items-center w-10 h-10 rounded-full bg-white"
-              >
-                <Image source={icons.out} className="w-4 h-4" />
-              </TouchableOpacity>
-            </View>
-
-            <GoogleTextInput
-              icon={icons.search}
-              containerStyle="bg-white shadow-md shadow-neutral-300"
-              handlePress={handleDestinationPress}
-            />
-
-            <>
-              <Text className="text-xl font-JakartaBold mt-5 mb-3">
-                Your current location
-              </Text>
-              <View className="flex flex-row items-center bg-transparent h-[300px]">
-                <Map />
-              </View>
-            </>
-
-            <Text className="text-xl font-JakartaBold mt-5 mb-3">
-              Recent Rides
-            </Text>
-          </>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <Animated.ScrollView
+        stickyHeaderIndices={[0]}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={RELATIVE_COLORS.teal}
+          />
         }
-      />
+        contentContainerStyle={styles.content}
+      >
+        <View style={styles.stickyHeaderWrap}>
+          <DashboardHeader
+            userName={user?.name?.split(" ")[0] || "Sarah"}
+            selectedElder={selectedElder}
+            elderCount={RELATIVE_ELDERS.length}
+            summary={dashboardSummary}
+            scrollY={scrollY}
+            onSwitchElder={switchElder}
+            onOpenNotifications={() =>
+              handleAction(
+                "Notifications",
+                "Open the notification inbox or center here.",
+              )
+            }
+            onOpenEmergencyCenter={() =>
+              handleAction(
+                "Emergency Center",
+                "Open urgent care and SOS shortcuts here.",
+              )
+            }
+          />
+        </View>
+
+        <View style={styles.sectionStack}>
+          <ActiveSessionCard
+            session={activeSession}
+            onViewLiveSession={() =>
+              handleAction(
+                "Live session",
+                "Open the live session and map view here.",
+              )
+            }
+            onOpenChat={() => router.push("/(root)/relative/chat")}
+            onEmergencyContact={() =>
+              handleAction(
+                "Emergency contact",
+                "Call the emergency contact shortcut here.",
+              )
+            }
+          />
+
+          <BookingCTA
+            nearbyCaregivers={dashboardSummary.nearbyCaregivers}
+            careOptions={QUICK_CARE_OPTIONS}
+            onBookCareNow={() => router.push("/(root)/relative/find-care")}
+          />
+
+          <View style={styles.subHeaderRow}>
+            <View>
+              <Animated.Text style={styles.sectionTitle}>
+                Upcoming Bookings
+              </Animated.Text>
+              <Animated.Text style={styles.sectionSubtitle}>
+                Future care sessions and confirmation status.
+              </Animated.Text>
+            </View>
+          </View>
+
+          <Animated.FlatList
+            data={filteredBookings}
+            keyExtractor={(item) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item, index }) => (
+              <UpcomingBookingCard
+                booking={item}
+                index={index}
+                onViewDetails={(booking: RelativeBooking) =>
+                  handleAction(
+                    "Booking details",
+                    `${booking.caregiverName} on ${booking.dateLabel} at ${booking.timeLabel}.`,
+                  )
+                }
+                onReschedule={(booking: RelativeBooking) =>
+                  handleAction(
+                    "Reschedule",
+                    `Reschedule ${booking.careType} with ${booking.caregiverName}.`,
+                  )
+                }
+                onCancelBooking={(booking: RelativeBooking) =>
+                  handleAction(
+                    "Cancel booking",
+                    `Cancel ${booking.careType} for ${booking.elderName}.`,
+                  )
+                }
+              />
+            )}
+            ListEmptyComponent={null}
+            contentContainerStyle={styles.carousel}
+          />
+
+          <ElderStatusCard elder={selectedElder} />
+
+          <ActivityFeed updates={filteredUpdates} />
+
+          <EmergencyAlertCard
+            alerts={filteredAlerts}
+            onPressAlert={(alert: RelativeEmergencyAlert) =>
+              handleAction(
+                alert.title,
+                `${alert.type} alert for ${selectedElder.name}.`,
+              )
+            }
+          />
+        </View>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
-};
+}
 
-export default RelativeHome;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: RELATIVE_COLORS.screen,
+  },
+  content: {
+    paddingBottom: 42,
+  },
+  stickyHeaderWrap: {
+    zIndex: 10,
+  },
+  sectionStack: {
+    paddingHorizontal: RELATIVE_LAYOUT.screenPadding,
+    paddingTop: 4,
+  },
+  subHeaderRow: {
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    color: RELATIVE_COLORS.text,
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+  },
+  sectionSubtitle: {
+    color: RELATIVE_COLORS.muted,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  carousel: {
+    paddingVertical: 4,
+    paddingRight: 10,
+    paddingBottom: 12,
+  },
+});
+
