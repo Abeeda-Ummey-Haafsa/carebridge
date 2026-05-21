@@ -9,6 +9,7 @@ import dollar from "@/assets/icons/dollar.png";
 import edit from "@/assets/icons/edit.png";
 import email from "@/assets/icons/email.png";
 import eyecross from "@/assets/icons/eyecross.png";
+import findCare from "@/assets/icons/findCare.png";
 import google from "@/assets/icons/google.png";
 import home from "@/assets/icons/home.png";
 import history from "@/assets/icons/history.png";
@@ -66,6 +67,7 @@ export const icons = {
   edit,
   email,
   eyecross,
+  findCare,
   google,
   home,
   history,

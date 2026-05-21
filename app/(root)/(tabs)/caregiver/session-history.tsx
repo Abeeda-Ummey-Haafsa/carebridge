@@ -34,36 +34,18 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-const earningsHistory = [
-  {
-    id: "1",
-    elderName: "Elena Rodriguez",
-    type: "Medical Care",
-    duration: "2 hrs",
-    payout: formatCurrency(50),
-    date: "Today, 11:00 AM",
-  },
-  {
-    id: "2",
-    elderName: "Arthur Pendelton",
-    type: "Companionship",
-    duration: "4 hrs",
-    payout: formatCurrency(100),
-    date: "Yesterday",
-  },
-];
-
 // ----------------------------------------------------
 // Analytics Card Component
 // ----------------------------------------------------
 const AnalyticsCard = () => {
   const barData = [
-    { value: 120, label: "M", frontColor: "#1fb299" },
-    { value: 90, label: "T", frontColor: "#a0bff0" },
-    { value: 150, label: "W", frontColor: "#1fb299" },
-    { value: 200, label: "T", frontColor: "#1fb299" },
-    { value: 170, label: "F", frontColor: "#a0bff0" },
-    { value: 80, label: "S", frontColor: "#e6e6e6" },
+    { value: 150, label: "Mon", frontColor: "#1fb299" },
+    { value: 200, label: "Tue", frontColor: "#a0bff0" },
+    { value: 180, label: "Wed", frontColor: "#1fb299" },
+    { value: 250, label: "Thu", frontColor: "#1fb299" },
+    { value: 300, label: "Fri", frontColor: "#a0bff0" },
+    { value: 170, label: "Sat", frontColor: "#1fb299" },
+    { value: 90, label: "Sun", frontColor: "#e6e6e6" },
   ];
 
   return (
@@ -83,25 +65,16 @@ const AnalyticsCard = () => {
 
       {/* This week & Pending */}
       <View style={styles.analyticsRow}>
-        <View style={[styles.statBox, { backgroundColor: "#e6f8f5" }]}>
+        <View style={styles.statBox}>
           <Text style={styles.statLabel}>This Week</Text>
           <Text style={[styles.statValue, { color: "#1fb299" }]}>
             {formatCurrency(1340)}
           </Text>
         </View>
         <View style={styles.statDivider} />
-        <View
-          style={[
-            styles.statBox,
-            {
-              backgroundColor: "#f9fbfd",
-              borderWidth: 1,
-              borderColor: "#e6e6e6",
-            },
-          ]}
-        >
+        <View style={styles.statBox}>
           <Text style={styles.statLabel}>Pending</Text>
-          <Text style={[styles.statValue, { color: "#333" }]}>
+          <Text style={[styles.statValue, { color: " #ef4444" }]}>
             {formatCurrency(250)}
           </Text>
         </View>
@@ -110,16 +83,15 @@ const AnalyticsCard = () => {
       <View style={styles.chartContainer}>
         <BarChart
           data={barData}
-          barWidth={18}
-          spacing={12}
+          barWidth={22}
+          spacing={24}
           roundedTop
           roundedBottom
-          hideRules
           xAxisThickness={0}
           yAxisThickness={0}
           yAxisTextStyle={{ color: "#888", fontSize: 10 }}
           noOfSections={3}
-          maxValue={250}
+          maxValue={500}
           isAnimated
         />
       </View>
@@ -128,6 +100,46 @@ const AnalyticsCard = () => {
 };
 
 // TODO: Recent Payout
+const RecentPayout = () => {
+  const earningsHistory = [
+    {
+      id: "1",
+      elderName: "Elena Rodriguez",
+      type: "Medical Care",
+      duration: "2 hrs",
+      payout: formatCurrency(50),
+      date: "Today, 11:00 AM",
+    },
+    {
+      id: "2",
+      elderName: "Arthur Pendelton",
+      type: "Companionship",
+      duration: "4 hrs",
+      payout: formatCurrency(100),
+      date: "Yesterday",
+    },
+  ];
+  return (
+    <View style={styles.analyticsCardOne}>
+      <Text style={styles.sectionTitle}>Recent Payouts</Text>
+      {earningsHistory.map((item) => (
+        <View key={item.id} style={styles.historyRow}>
+          <View style={styles.historyDot} />
+          <View style={styles.historyContent}>
+            <Text style={styles.historyName}>{item.elderName}</Text>
+            <Text style={styles.historySub}>
+              {item.type} • {item.duration}
+            </Text>
+          </View>
+          <View style={styles.historyRight}>
+            <Text style={styles.historyPayout}>{item.payout}</Text>
+            <Text style={styles.historyDate}>{item.date}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+};
 
 // ----------------------------------------------------
 // Main Screen Export
@@ -283,6 +295,7 @@ export default function SessionHistoryScreen() {
         </View>
 
         {activeFilter === "All" && !searchQuery && <AnalyticsCard />}
+        {activeFilter === "All" && !searchQuery && <RecentPayout />}
       </View>
     </View>
   );
@@ -591,6 +604,16 @@ const styles = StyleSheet.create({
     tintColor: "#1fb299",
   },
   analyticsCard: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 20,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    marginBottom: 15, // 👈 Adds space below the first card
+  },
+  analyticsCardOne: {
     backgroundColor: "#fff",
     padding: 20,
     borderRadius: 20,

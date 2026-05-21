@@ -109,7 +109,7 @@ const CaregiverTabLayout = () => {
         }}
       />
       <Tabs.Screen
-        name="history"
+        name="session-history"
         options={{
           title: "Session History",
           headerShown: false,

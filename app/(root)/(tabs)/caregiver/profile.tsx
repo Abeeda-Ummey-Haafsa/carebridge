@@ -37,25 +37,6 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-const earningsHistory = [
-  {
-    id: "1",
-    elderName: "Elena Rodriguez",
-    type: "Medical Care",
-    duration: "2 hrs",
-    payout: formatCurrency(50),
-    date: "Today, 11:00 AM",
-  },
-  {
-    id: "2",
-    elderName: "Arthur Pendelton",
-    type: "Companionship",
-    duration: "4 hrs",
-    payout: formatCurrency(100),
-    date: "Yesterday",
-  },
-];
-
 export default function CaregiverProfile() {
   const router = useRouter();
   const { signOut } = useAuth();
@@ -138,70 +119,7 @@ export default function CaregiverProfile() {
           </View>
         </View>
 
-        {/* EARNINGS TRACKER */}
-        <View style={styles.sectionContainer}>
-          {renderSectionTitle("Earnings Tracker")}
-
-          {/* This Week & Pending */}
-          <View style={styles.earningsSummaryRow}>
-            <View style={[styles.earningsCard, { backgroundColor: "#e6f8f5" }]}>
-              <Text style={styles.earningsLabel}>This Week</Text>
-              <Text style={[styles.earningsAmount, { color: "#1fb299" }]}>
-                {formatCurrency(1340)}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.earningsCard,
-                {
-                  backgroundColor: "#f9fbfd",
-                  borderWidth: 1,
-                  borderColor: "#e6e6e6",
-                },
-              ]}
-            >
-              <Text style={styles.earningsLabel}>Pending</Text>
-              <Text style={[styles.earningsAmount, { color: "#333" }]}>
-                {formatCurrency(250)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Weekly Overview</Text>
-            <BarChart
-              data={earningsData}
-              barWidth={22}
-              spacing={14}
-              roundedTop
-              roundedBottom
-              xAxisThickness={0}
-              yAxisThickness={0}
-              yAxisTextStyle={{ color: "gray", fontSize: 10 }}
-              noOfSections={3}
-              maxValue={400}
-              hideRules
-              isAnimated
-            />
-          </View>
-
-          <Text style={styles.subSectionTitle}>Recent Payouts</Text>
-          {earningsHistory.map((item) => (
-            <View key={item.id} style={styles.historyRow}>
-              <View style={styles.historyDot} />
-              <View style={styles.historyContent}>
-                <Text style={styles.historyName}>{item.elderName}</Text>
-                <Text style={styles.historySub}>
-                  {item.type} • {item.duration}
-                </Text>
-              </View>
-              <View style={styles.historyRight}>
-                <Text style={styles.historyPayout}>{item.payout}</Text>
-                <Text style={styles.historyDate}>{item.date}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
+      
 
         {/* PROFILE DETAILS */}
         <View style={styles.sectionContainer}>
