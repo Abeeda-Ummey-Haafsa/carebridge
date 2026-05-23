@@ -102,7 +102,7 @@ const RelativeTabLayout = () => {
             <TabIcon
               icon={icons.chat}
               color={color}
-              name="History"
+              name="Chat"
               focused={focused}
             />
           ),
@@ -110,7 +110,7 @@ const RelativeTabLayout = () => {
       />
       {/* BOOKING HISTORY + ACTIVE SESSION*/}
       <Tabs.Screen
-        name="sessions"
+        name="session-history"
         options={{
           title: "Sessions",
           headerShown: false,
@@ -119,7 +119,7 @@ const RelativeTabLayout = () => {
               <TabIcon
                 icon={icons.history}
                 color={color}
-                name="Chat"
+                name="Session"
                 focused={focused}
               />
               <View style={styles.notificationBadge}>

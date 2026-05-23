@@ -51,5 +51,5 @@ export function getHomeRouteByRole(role: string): string {
     relative: "/(root)/(tabs)/relative/home",
     elder: "/(root)/(tabs)/elder/home",
   };
-  return roleMap[role] || "/(root)/(tabs)/home";
+  return roleMap[role] || "/(auth)/welcome";
 }

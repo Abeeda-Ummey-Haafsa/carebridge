@@ -82,3 +82,6 @@ export const useDriverStore = create<DriverStore>((set) => ({
 }));
 
 export * from "./relativeDashboardStore";
+export * from "./elderDashboardStore";
+export * from "./relativeProfileStore";
+export * from "./relativeSessionsStore";
