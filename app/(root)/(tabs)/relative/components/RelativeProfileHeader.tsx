@@ -1,11 +1,6 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
 
 import { icons } from "@/constants";
 import { RelativeProfile } from "@/store/relativeProfileStore";
@@ -28,15 +23,10 @@ export const RelativeProfileHeader: React.FC<RelativeProfileHeaderProps> = ({
   quickStats,
   onEditPress,
 }) => {
-  const completion = useSharedValue(0);
-
-  useEffect(() => {
-    completion.value = withTiming(profile.profileCompletion, { duration: 900 });
-  }, [completion, profile.profileCompletion]);
-
-  const completionStyle = useAnimatedStyle(() => ({
-    width: `${Math.max(8, completion.value)}%`,
-  }));
+  const completionWidth: `${number}%` = `${Math.max(
+    8,
+    profile.profileCompletion,
+  )}%`;
 
   return (
     <View style={styles.wrap}>
@@ -74,7 +64,7 @@ export const RelativeProfileHeader: React.FC<RelativeProfileHeaderProps> = ({
             </Text>
           </View>
           <View style={styles.track}>
-            <Animated.View style={[styles.fill, completionStyle]} />
+            <View style={[styles.fill, { width: completionWidth }]} />
           </View>
         </View>
 
