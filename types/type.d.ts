@@ -141,8 +141,10 @@ declare interface DriverCardProps {
 }
 
 declare interface User {
-  id: string;
+  id: number | string;
+  clerk_id: string;
   name: string;
   email: string;
   role: UserRole;
+  created_at: string;
 }

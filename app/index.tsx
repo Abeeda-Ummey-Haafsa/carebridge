@@ -33,10 +33,12 @@ const Page = () => {
 
         if (profile) {
           setUser({
-            id: profile.id || profile.clerk_id,
+            id: profile.id,
+            clerk_id: profile.clerk_id,
             name: profile.name,
             email: profile.email,
             role: profile.role,
+            created_at: profile.created_at,
           });
           setRole(profile.role);
 
