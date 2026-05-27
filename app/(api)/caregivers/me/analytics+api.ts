@@ -1,72 +1,80 @@
-/*
-  FILE: app/(api)/caregivers/me/analytics+api.ts
-  PURPOSE: GET /caregivers/me/analytics
-           Computed performance metrics for the Profile screen
-           analytics section and Session History analytics preview.
+import { requireCaregiver, ApiAuthError } from "@/lib/server-auth";
+import { db } from "@/lib/db";
 
-  ── IMPORTS ────────────────────────────────────────────────────────────────
-  import { requireCaregiver, ApiAuthError } from '@/lib/server-auth'
-  import { db }                             from '@/lib/db'
+export async function GET(request: Request) {
+  try {
+    const { caregiver } = await requireCaregiver(request);
 
-  ── STEPS IN ORDER ────────────────────────────────────────────────────────
+    const [metricsRows, careTypeRows, earningsRows] = await Promise.all([
+      db<any>`
+        SELECT
+          COALESCE(AVG(total_cost), 0)::FLOAT AS avg_payout,
+          COALESCE(AVG(actual_duration_minutes), 0)::FLOAT AS avg_duration_minutes,
+          COUNT(*) FILTER (WHERE status = 'completed')::INT AS completed_count,
+          COUNT(*) FILTER (WHERE status IN ('accepted', 'declined'))::INT AS responded_count,
+          COUNT(*) FILTER (WHERE status = 'accepted')::INT AS accepted_count
+        FROM care_sessions
+        WHERE caregiver_id = ${caregiver.id}
+      `,
+      db<any>`
+        SELECT care_type, COUNT(*)::INT AS freq
+        FROM care_sessions
+        WHERE caregiver_id = ${caregiver.id}
+          AND status = 'completed'
+        GROUP BY care_type
+        ORDER BY freq DESC
+        LIMIT 1
+      `,
+      db<any>`
+        SELECT COALESCE(SUM(total_cost), 0)::FLOAT AS weekly_earnings
+        FROM care_sessions
+        WHERE caregiver_id = ${caregiver.id}
+          AND status = 'completed'
+          AND scheduled_at >= CURRENT_DATE - INTERVAL '7 days'
+      `,
+    ]);
 
-  STEP 1 — requireCaregiver(request) → { caregiver }
+    const metricsRow = metricsRows[0] || {
+      avg_payout: 0,
+      avg_duration_minutes: 0,
+      completed_count: 0,
+      responded_count: 0,
+      accepted_count: 0,
+    };
 
-  STEP 2 — Run all analytics queries in parallel with Promise.all():
+    const mostCommonCareType =
+      careTypeRows.length > 0 ? careTypeRows[0].care_type : null;
+    const weeklyEarnings = earningsRows[0]?.weekly_earnings || 0;
 
-    QUERY A — General metrics (single query)
-      SELECT
-        COALESCE(AVG(total_cost), 0)::FLOAT              AS avg_payout,
-        COALESCE(AVG(actual_duration_minutes), 0)::FLOAT AS avg_duration_minutes,
-        COUNT(*) FILTER (WHERE status = 'completed')::INT AS completed_count,
-        COUNT(*) FILTER (WHERE status IN ('accepted','declined'))::INT
-                                                          AS responded_count,
-        COUNT(*) FILTER (WHERE status = 'accepted')::INT  AS accepted_count
-      FROM care_sessions
-      WHERE caregiver_id = ${caregiver.id}
-
-    QUERY B — Most common care type
-      SELECT care_type, COUNT(*) AS freq
-      FROM   care_sessions
-      WHERE  caregiver_id = ${caregiver.id}
-        AND  status = 'completed'
-      GROUP  BY care_type
-      ORDER  BY freq DESC
-      LIMIT  1
-
-    QUERY C — This week's earnings
-      SELECT COALESCE(SUM(total_cost), 0)::FLOAT AS weekly_earnings
-      FROM   care_sessions
-      WHERE  caregiver_id = ${caregiver.id}
-        AND  status = 'completed'
-        AND  scheduled_at >= CURRENT_DATE - INTERVAL '7 days'
-
-  STEP 3 — Compute response_rate
-    const responseRate =
-      metricsRow.responded_count > 0
-        ? parseFloat(
-            ((metricsRow.accepted_count / metricsRow.responded_count) * 100
-            ).toFixed(1)
-          )
-        : null   // null = not enough data yet
-
-  STEP 4 — Return 200:
-    {
-      success: true,
-      data: {
-        avg_payout_per_session:    number,
-        avg_session_duration_mins: number,
-        completed_sessions:        number,
-        most_common_care_type:     string | null,
-        response_rate_pct:         number | null,
-        weekly_earnings:           number,
-      }
+    let responseRate: number | null = null;
+    if (metricsRow.responded_count > 0) {
+      responseRate = parseFloat(
+        (
+          (metricsRow.accepted_count / metricsRow.responded_count) *
+          100
+        ).toFixed(1),
+      );
     }
 
-  ── CONSTRAINTS ────────────────────────────────────────────────────────────
-  - Use Promise.all for the three queries — never run them sequentially
-  - response_rate_pct is null when responded_count = 0, not 0
-    (null means "no data yet"; 0 means "never accepted a booking")
-  - most_common_care_type is null if no completed sessions exist
-  - All FLOAT casts prevent Neon returning numeric values as strings
-*/
+    return Response.json({
+      success: true,
+      data: {
+        avg_payout_per_session: metricsRow.avg_payout,
+        avg_session_duration_mins: metricsRow.avg_duration_minutes,
+        completed_sessions: metricsRow.completed_count,
+        most_common_care_type: mostCommonCareType,
+        response_rate_pct: responseRate,
+        weekly_earnings: weeklyEarnings,
+      },
+    });
+  } catch (err: any) {
+    if (err instanceof ApiAuthError) {
+      return Response.json(
+        { error: err.message },
+        { status: err.statusCode || 401 },
+      );
+    }
+    console.error("[caregivers/me/analytics GET]", err);
+    return Response.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
