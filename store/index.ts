@@ -1,12 +1,7 @@
 import { create } from "zustand";
+import { User, UserRole } from "@/types/db";
 
-import {
-  DriverStore,
-  LocationStore,
-  MarkerData,
-  UserRole,
-  User,
-} from "@/types/type";
+import { DriverStore, LocationStore, MarkerData } from "@/types/type";
 
 export const useUserStore = create<{
   user: User | null;

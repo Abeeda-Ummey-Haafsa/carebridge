@@ -1,11 +1,18 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
+<<<<<<< Updated upstream
+=======
+    "target": "esnext",
+    "module": "esnext",
+    "lib": [
+      "esnext",
+      "DOM"
+    ],
+>>>>>>> Stashed changes
     "strict": true,
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     }
   },
   "include": [

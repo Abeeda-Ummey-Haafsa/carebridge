@@ -19,7 +19,6 @@ import {
   CareSession,
   SessionStatus,
 } from "@/store/sessionHistoryStore";
-import { BarChart } from "react-native-gifted-charts";
 import Animated, {
   FadeInDown,
   FadeInUp,
@@ -35,70 +34,7 @@ const formatCurrency = (amount: number) => {
 };
 
 // ----------------------------------------------------
-// Analytics Card Component
 // ----------------------------------------------------
-const AnalyticsCard = () => {
-  const barData = [
-    { value: 150, label: "Mon", frontColor: "#1fb299" },
-    { value: 200, label: "Tue", frontColor: "#a0bff0" },
-    { value: 180, label: "Wed", frontColor: "#1fb299" },
-    { value: 250, label: "Thu", frontColor: "#1fb299" },
-    { value: 300, label: "Fri", frontColor: "#a0bff0" },
-    { value: 170, label: "Sat", frontColor: "#1fb299" },
-    { value: 90, label: "Sun", frontColor: "#e6e6e6" },
-  ];
-
-  return (
-    <View style={styles.analyticsCard}>
-      <Text style={styles.sectionTitle}>Earnings & Activity</Text>
-      <View style={styles.analyticsRow}>
-        <View style={styles.statBox}>
-          <Text style={styles.statLabel}>Avg. Payout</Text>
-          <Text style={styles.statValue}>{formatCurrency(85.5)}</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statBox}>
-          <Text style={styles.statLabel}>Top Care Type</Text>
-          <Text style={styles.statValueText}>Medical Care</Text>
-        </View>
-      </View>
-
-      {/* This week & Pending */}
-      <View style={styles.analyticsRow}>
-        <View style={styles.statBox}>
-          <Text style={styles.statLabel}>This Week</Text>
-          <Text style={[styles.statValue, { color: "#1fb299" }]}>
-            {formatCurrency(1340)}
-          </Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statBox}>
-          <Text style={styles.statLabel}>Pending</Text>
-          <Text style={[styles.statValue, { color: " #ef4444" }]}>
-            {formatCurrency(250)}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.chartContainer}>
-        <BarChart
-          data={barData}
-          barWidth={22}
-          spacing={24}
-          roundedTop
-          roundedBottom
-          xAxisThickness={0}
-          yAxisThickness={0}
-          yAxisTextStyle={{ color: "#888", fontSize: 10 }}
-          noOfSections={3}
-          maxValue={500}
-          isAnimated
-        />
-      </View>
-    </View>
-  );
-};
-
 // TODO: Recent Payout
 const RecentPayout = () => {
   const earningsHistory = [
@@ -120,7 +56,7 @@ const RecentPayout = () => {
     },
   ];
   return (
-    <View style={styles.analyticsCardOne}>
+    <View style={styles.analyticsCard}>
       <Text style={styles.sectionTitle}>Recent Payouts</Text>
       {earningsHistory.map((item) => (
         <View key={item.id} style={styles.historyRow}>
@@ -294,7 +230,6 @@ export default function SessionHistoryScreen() {
           </TouchableOpacity>
         </View>
 
-        {activeFilter === "All" && !searchQuery && <AnalyticsCard />}
         {activeFilter === "All" && !searchQuery && <RecentPayout />}
       </View>
     </View>
@@ -603,59 +538,7 @@ const styles = StyleSheet.create({
     height: 20,
     tintColor: "#1fb299",
   },
-  analyticsCard: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 20,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    marginBottom: 15, // 👈 Adds space below the first card
-  },
-  analyticsCardOne: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 20,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-  },
-  analyticsRow: {
-    flexDirection: "row",
-    marginBottom: 15,
-  },
-  statBox: {
-    flex: 1,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: "#e6e6e6",
-    marginHorizontal: 15,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#888",
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#0d5c63",
-  },
-  statValueText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    marginTop: 2,
-  },
-  subSectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 12,
-  },
+
   historyRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -752,6 +635,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#888",
     marginTop: 2,
+  },
+  analyticsCard: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 20,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    marginBottom: 15, // 👈 Adds space below the first card
   },
   statusBadge: {
     paddingHorizontal: 8,
