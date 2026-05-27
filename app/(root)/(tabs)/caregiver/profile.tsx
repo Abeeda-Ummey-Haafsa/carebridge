@@ -19,7 +19,7 @@ import { useRouter } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
 
 // Mock Data for Charts
-const earningsData = [
+const barData = [
   { value: 150, label: "Mon", frontColor: "#1fb299" },
   { value: 200, label: "Tue", frontColor: "#a0bff0" },
   { value: 180, label: "Wed", frontColor: "#1fb299" },
@@ -119,8 +119,6 @@ export default function CaregiverProfile() {
           </View>
         </View>
 
-      
-
         {/* PROFILE DETAILS */}
         <View style={styles.sectionContainer}>
           {renderSectionTitle("Caregiver Details")}
@@ -150,6 +148,59 @@ export default function CaregiverProfile() {
                   </View>
                 ))}
               </View>
+            </View>
+          </View>
+        </View>
+
+        {/* TODO: Earnings Tracking */}
+        <View style={styles.sectionContainer}>
+          {renderSectionTitle("Earnings & Activity")}
+          <View style={styles.analyticsCard}>
+            <View style={styles.analyticsRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel1}>Avg. Payout</Text>
+                <Text style={styles.statValue}>{formatCurrency(85.5)}</Text>
+              </View>
+              <View style={styles.statDivider1} />
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel1}>Top Care Type</Text>
+                <Text style={styles.statValueText}>MEDICAL CARE</Text>
+              </View>
+            </View>
+
+            {/* This week & Pending */}
+            <View style={styles.analyticsRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel1}>This Week</Text>
+                <Text style={[styles.statValue, { color: "#1fb299" }]}>
+                  {formatCurrency(1340)}
+                </Text>
+              </View>
+              <View style={styles.statDivider1} />
+              <View style={styles.statBox}>
+                <Text style={[styles.statLabel1, { color: "#ef4444" }]}>
+                  Pending
+                </Text>
+                <Text style={[styles.statValue, { color: "#ef4444" }]}>
+                  {formatCurrency(250)}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.chartContainer}>
+              <BarChart
+                data={barData}
+                barWidth={22}
+                spacing={24}
+                roundedTop
+                roundedBottom
+                xAxisThickness={0}
+                yAxisThickness={0}
+                yAxisTextStyle={{ color: "#888", fontSize: 10 }}
+                noOfSections={3}
+                maxValue={500}
+                isAnimated
+              />
             </View>
           </View>
         </View>
@@ -336,6 +387,11 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: "#e6e6e6",
   },
+  statDivider1: {
+    width: 1,
+    backgroundColor: "#e6e6e6",
+    marginHorizontal: 15,
+  },
   availabilityRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -347,6 +403,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#333",
+  },
+  analyticsCard: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 20,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    marginBottom: 15, // 👈 Adds space below the first card
+  },
+  analyticsCardOne: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 20,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+  },
+  analyticsRow: {
+    flexDirection: "row",
+    marginBottom: 15,
+  },
+  statBox: {
+    flex: 1,
+  },
+
+  statLabel1: {
+    fontSize: 12,
+    color: "#888",
+    marginBottom: 4,
+  },
+  statValueText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginTop: 2,
+  },
+  subSectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 12,
   },
   sectionContainer: {
     paddingHorizontal: 20,
@@ -395,11 +495,9 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 20,
   },
-  subSectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 12,
+  chartContainer: {
+    alignItems: "center",
+    marginTop: 10,
   },
   historyRow: {
     flexDirection: "row",

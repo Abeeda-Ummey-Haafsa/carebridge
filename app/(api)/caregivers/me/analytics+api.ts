@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream
-=======
 import { requireCaregiver, ApiAuthError } from "@/lib/server-auth";
 import { db } from "@/lib/db";
 
@@ -80,4 +78,4 @@ export async function GET(request: Request) {
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }
->>>>>>> Stashed changes
+
