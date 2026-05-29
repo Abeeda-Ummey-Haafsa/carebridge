@@ -1,19 +1,29 @@
 import { neon } from "@neondatabase/serverless";
 
+function jsonResponse(body: unknown, init?: ResponseInit) {
+  return new Response(JSON.stringify(body), {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const sql = neon(`${process.env.DATABASE_URL}`);
     const { name, email, clerkId, role } = await request.json();
 
     if (!name || !email || !clerkId || !role) {
-      return Response.json(
+      return jsonResponse(
         { error: "Missing required fields" },
         { status: 400 },
       );
     }
 
     if (!["caregiver", "elder", "relative"].includes(role)) {
-      return Response.json(
+      return jsonResponse(
         { error: "Invalid role. Must be 'caregiver', 'elder', or 'relative'" },
         { status: 400 },
       );
@@ -33,18 +43,17 @@ export async function POST(request: Request) {
         ${role}
       )
       ON CONFLICT (clerk_id) DO NOTHING
-      RETURNING id, clerk_id, email, name, role;`;
+      RETURNING id, clerk_id, email, name, role, created_at;
+    `;
 
     if (response.length === 0) {
-      return Response.json({ error: "User already exists" }, { status: 409 });
+      return jsonResponse({ error: "User already exists" }, { status: 409 });
     }
 
-    return new Response(JSON.stringify({ data: response[0] }), {
-      status: 201,
-    });
+    return jsonResponse({ data: response[0] }, { status: 201 });
   } catch (error) {
     console.error("Error creating user:", error);
-    return Response.json({ error: "Internal Server Error" }, { status: 500 });
+    return jsonResponse({ error: "Internal Server Error" }, { status: 500 });
   }
 }
 
@@ -56,30 +65,27 @@ export async function GET(request: Request) {
     const email = url.searchParams.get("email");
 
     if (!clerkId && !email) {
-      return Response.json(
+      return jsonResponse(
         { error: "Missing clerkId or email parameter" },
         { status: 400 },
       );
     }
 
-    let response;
-    if (clerkId) {
-      response = await sql`
-        SELECT id, clerk_id, email, name, role FROM users WHERE clerk_id = ${clerkId};
-      `;
-    } else {
-      response = await sql`
-        SELECT id, clerk_id, email, name, role FROM users WHERE email = ${email};
-      `;
-    }
+    const response = clerkId
+      ? await sql`
+          SELECT id, clerk_id, email, name, role, created_at FROM users WHERE clerk_id = ${clerkId};
+        `
+      : await sql`
+          SELECT id, clerk_id, email, name, role, created_at FROM users WHERE email = ${email};
+        `;
 
     if (response.length === 0) {
-      return Response.json({ error: "User not found" }, { status: 404 });
+      return jsonResponse({ error: "User not found" }, { status: 404 });
     }
 
-    return Response.json({ data: response[0] }, { status: 200 });
+    return jsonResponse({ data: response[0] }, { status: 200 });
   } catch (error) {
     console.error("Error fetching user:", error);
-    return Response.json({ error: "Internal Server Error" }, { status: 500 });
+    return jsonResponse({ error: "Internal Server Error" }, { status: 500 });
   }
 }

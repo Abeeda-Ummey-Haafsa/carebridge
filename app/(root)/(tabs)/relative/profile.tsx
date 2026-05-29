@@ -3,23 +3,15 @@ import {
   Alert,
   Modal,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
-import Animated, {
-  Extrapolation,
-  FadeInDown,
-  interpolate,
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useSharedValue,
-} from "react-native-reanimated";
 
 import {
   selectProfileQuickStats,
@@ -37,27 +29,21 @@ import { RelativeProfileLoading } from "./components/RelativeProfileLoading";
 import { RelativeSecuritySettingsCard } from "./components/RelativeSecuritySettingsCard";
 import { RelativeSupportSection } from "./components/RelativeSupportSection";
 
-const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
-
 const SectionCard: React.FC<{ title: string; children: React.ReactNode }> = ({
   title,
   children,
 }) => {
   return (
-    <Animated.View
-      entering={FadeInDown.duration(250)}
-      style={styles.sectionWrap}
-    >
+    <View style={styles.sectionWrap}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <View style={styles.groupCard}>{children}</View>
-    </Animated.View>
+    </View>
   );
 };
 
 export default function RelativeProfileScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
-  const scrollY = useSharedValue(0);
 
   const {
     isLoading,
@@ -102,31 +88,6 @@ export default function RelativeProfileScreen() {
 
   const completionWarning = profile.profileCompletion < 100;
 
-  const stickyBarStyle = useAnimatedStyle(() => ({
-    transform: [
-      {
-        translateY: interpolate(
-          scrollY.value,
-          [0, 110],
-          [0, -4],
-          Extrapolation.CLAMP,
-        ),
-      },
-    ],
-    opacity: interpolate(
-      scrollY.value,
-      [0, 100],
-      [0.95, 1],
-      Extrapolation.CLAMP,
-    ),
-  }));
-
-  const onScroll = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
-
   const onRefresh = () => {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 700);
@@ -148,10 +109,7 @@ export default function RelativeProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <AnimatedScrollView
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        stickyHeaderIndices={[1]}
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         refreshControl={
@@ -170,7 +128,7 @@ export default function RelativeProfileScreen() {
           }
         />
 
-        <Animated.View style={[styles.stickySwitcher, stickyBarStyle]}>
+        <View style={styles.stickySwitcher}>
           <View style={styles.stickyIdentityRow}>
             <View>
               <Text style={styles.stickyName}>{profile.fullName}</Text>
@@ -205,7 +163,7 @@ export default function RelativeProfileScreen() {
               );
             })}
           </View>
-        </Animated.View>
+        </View>
 
         <SectionCard title="Elder Management">
           {elders.length === 0 ? (
@@ -518,7 +476,7 @@ export default function RelativeProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
-      </AnimatedScrollView>
+      </ScrollView>
 
       <Modal visible={logoutModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>

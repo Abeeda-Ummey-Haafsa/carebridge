@@ -44,13 +44,16 @@ const SignIn = () => {
           const userData = await fetchAPI(
             `/(api)/user?email=${encodeURIComponent(form.email)}`,
           );
-          const userRole = userData?.data?.role || "caregiver";
+          const userRole = userData?.data?.role;
+          // const userRole = userData?.data?.role || "caregiver";
           if (userData?.data) {
             setUser({
-              id: userData.data.id || userData.data.clerk_id,
+              id: userData.data.id,
+              clerk_id: userData.data.clerk_id,
               name: userData.data.name,
               email: userData.data.email,
               role: userRole,
+              created_at: userData.data.created_at,
             });
           }
           setRole(userRole);
@@ -58,7 +61,7 @@ const SignIn = () => {
           router.replace(homeRoute as any);
         } catch (err) {
           console.error("Failed to fetch user role:", err);
-          router.replace("/(root)/(tabs)/home");
+          // router.replace("/(root)/(tabs)/caregiver/home");
         }
       } else if (signInAttempt.status === "needs_second_factor") {
         // Trigger email OTP
@@ -100,10 +103,12 @@ const SignIn = () => {
           const userRole = userData?.data?.role || "caregiver";
           if (userData?.data) {
             setUser({
-              id: userData.data.id || userData.data.clerk_id,
+              id: userData.data.id,
+              clerk_id: userData.data.clerk_id,
               name: userData.data.name,
               email: userData.data.email,
               role: userRole,
+              created_at: userData.data.created_at,
             });
           }
           // Why caregiver as the default
@@ -114,7 +119,7 @@ const SignIn = () => {
           router.replace(homeRoute as any);
         } catch (err) {
           console.error("Failed to fetch user role:", err);
-          router.replace("/(root)/(tabs)/home");
+          router.replace("/(root)/(tabs)/caregiver/home");
         }
 
         setVerification({ state: "default", code: "", error: "" });
