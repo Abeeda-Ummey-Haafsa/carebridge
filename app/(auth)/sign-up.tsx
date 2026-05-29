@@ -58,7 +58,7 @@ const SignUp = () => {
       });
       if (completeSignUp.status === "complete") {
         // For Database creation
-        await fetchAPI("/(api)/user", {
+        const userResponse = await fetchAPI("/(api)/user", {
           method: "POST",
           body: JSON.stringify({
             name: form.name,
@@ -67,7 +67,19 @@ const SignUp = () => {
             role: form.role,
           }),
         });
+        const createdUser = userResponse?.data;
         await setActive({ session: completeSignUp.createdSessionId });
+        if (createdUser) {
+          setUser({
+            id: createdUser.id,
+            clerk_id: createdUser.clerk_id,
+            name: createdUser.name,
+            email: createdUser.email,
+            role: createdUser.role,
+            created_at: createdUser.created_at,
+          });
+          setRole(createdUser.role);
+        }
         setVerification({
           ...verification,
           state: "success",
@@ -240,13 +252,6 @@ const SignUp = () => {
               title="Browse Home"
               onPress={async () => {
                 setShowSuccessModal(false);
-                setUser({
-                  id: form.email, // using email or clerkId
-                  name: form.name,
-                  email: form.email,
-                  role: form.role as any,
-                });
-                setRole(form.role as any);
                 const homeRoute = getHomeRouteByRole(form.role);
                 router.push(homeRoute as any);
               }}
