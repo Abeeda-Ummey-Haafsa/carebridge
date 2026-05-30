@@ -52,9 +52,6 @@ const CaregiverTabLayout = () => {
         }
       } catch (e: any) {
         console.error("prefetch caregiver profile", e);
-        try {
-          Alert.alert("Failed to load profile");
-        } catch {}
       }
     })();
     return () => {
