@@ -1,4 +1,4 @@
-import { useSignIn, useUser } from "@clerk/clerk-expo";
+import { useAuth, useSignIn, useUser } from "@clerk/clerk-expo";
 import { Link, router } from "expo-router";
 import { useCallback, useState, useEffect } from "react";
 import { Alert, Image, ScrollView, Text, View } from "react-native";
@@ -14,6 +14,7 @@ import { useUserStore } from "@/store";
 
 const SignIn = () => {
   const { isLoaded, signIn, setActive } = useSignIn();
+  const { isSignedIn } = useAuth();
   const { user } = useUser();
   const { setRole, setUser } = useUserStore();
 
@@ -28,6 +29,38 @@ const SignIn = () => {
     error: "",
   });
 
+  const hydrateAndRouteSignedInUser = useCallback(async () => {
+    const userData = user?.id
+      ? await fetchAPI(`/api/user?clerkId=${encodeURIComponent(user.id)}`)
+      : await fetchAPI(`/api/user?email=${encodeURIComponent(form.email)}`);
+
+    const profile = userData?.data;
+    const userRole = profile?.role || "caregiver";
+
+    if (profile) {
+      setUser({
+        id: profile.id,
+        clerk_id: profile.clerk_id,
+        name: profile.name,
+        email: profile.email,
+        role: userRole,
+        created_at: profile.created_at,
+      });
+    }
+
+    setRole(userRole);
+    router.replace(getHomeRouteByRole(userRole) as any);
+  }, [form.email, setRole, setUser, user?.id]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+
+    hydrateAndRouteSignedInUser().catch((err) => {
+      console.error("Failed to route signed-in user:", err);
+      router.replace("/(root)/(tabs)/caregiver/home");
+    });
+  }, [hydrateAndRouteSignedInUser, isLoaded, isSignedIn]);
+
   // 🔐 Step 1: Sign in
   const onSignInPress = useCallback(async () => {
     if (!isLoaded) return;
@@ -41,27 +74,10 @@ const SignIn = () => {
       if (signInAttempt.status === "complete") {
         await setActive({ session: signInAttempt.createdSessionId });
         try {
-          const userData = await fetchAPI(
-            `/(api)/user?email=${encodeURIComponent(form.email)}`,
-          );
-          const userRole = userData?.data?.role;
-          // const userRole = userData?.data?.role || "caregiver";
-          if (userData?.data) {
-            setUser({
-              id: userData.data.id,
-              clerk_id: userData.data.clerk_id,
-              name: userData.data.name,
-              email: userData.data.email,
-              role: userRole,
-              created_at: userData.data.created_at,
-            });
-          }
-          setRole(userRole);
-          const homeRoute = getHomeRouteByRole(userRole);
-          router.replace(homeRoute as any);
+          await hydrateAndRouteSignedInUser();
         } catch (err) {
           console.error("Failed to fetch user role:", err);
-          // router.replace("/(root)/(tabs)/caregiver/home");
+          router.replace("/(root)/(tabs)/caregiver/home");
         }
       } else if (signInAttempt.status === "needs_second_factor") {
         // Trigger email OTP
@@ -79,10 +95,26 @@ const SignIn = () => {
         Alert.alert("Error", "Unexpected sign-in state.");
       }
     } catch (err: any) {
+      const clerkErrors = Array.isArray(err?.errors) ? err.errors : [];
+      const hasExistingSession = clerkErrors.some(
+        (e: any) => e?.code === "session_exists",
+      );
+
+      if (hasExistingSession) {
+        try {
+          await hydrateAndRouteSignedInUser();
+          return;
+        } catch (routeErr) {
+          console.error("Failed to route existing session:", routeErr);
+          router.replace("/(root)/(tabs)/caregiver/home");
+          return;
+        }
+      }
+
       console.log(JSON.stringify(err, null, 2));
       Alert.alert("Error", err.errors?.[0]?.longMessage || "Login failed");
     }
-  }, [isLoaded, form, setRole]);
+  }, [form, hydrateAndRouteSignedInUser, isLoaded, setActive, signIn]);
 
   // 🔐 Step 2: Verify OTP
   const onVerifyCode = async () => {
@@ -97,26 +129,7 @@ const SignIn = () => {
         await setActive({ session: result.createdSessionId });
 
         try {
-          const userData = await fetchAPI(
-            `/(api)/user?email=${encodeURIComponent(form.email)}`,
-          );
-          const userRole = userData?.data?.role || "caregiver";
-          if (userData?.data) {
-            setUser({
-              id: userData.data.id,
-              clerk_id: userData.data.clerk_id,
-              name: userData.data.name,
-              email: userData.data.email,
-              role: userRole,
-              created_at: userData.data.created_at,
-            });
-          }
-          // Why caregiver as the default
-          // If the API response is malformed or the role field is unexpectedly missing/null,
-          // the app still has a valid role to work with rather than breaking with undefined.
-          setRole(userRole);
-          const homeRoute = getHomeRouteByRole(userRole);
-          router.replace(homeRoute as any);
+          await hydrateAndRouteSignedInUser();
         } catch (err) {
           console.error("Failed to fetch user role:", err);
           router.replace("/(root)/(tabs)/caregiver/home");

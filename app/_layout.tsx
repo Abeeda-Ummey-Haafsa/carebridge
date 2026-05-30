@@ -5,6 +5,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "react-native-reanimated";
 import { LogBox } from "react-native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { tokenCache } from "@/lib/auth";
 
@@ -12,6 +13,7 @@ import { tokenCache } from "@/lib/auth";
 SplashScreen.preventAutoHideAsync();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+const queryClient = new QueryClient();
 
 if (!publishableKey) {
   throw new Error(
@@ -43,15 +45,17 @@ export default function RootLayout() {
   }
 
   return (
-    <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
-      <ClerkLoaded>
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(root)" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-      </ClerkLoaded>
-    </ClerkProvider>
+    <QueryClientProvider client={queryClient}>
+      <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
+        <ClerkLoaded>
+          <Stack>
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(root)" options={{ headerShown: false }} />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+        </ClerkLoaded>
+      </ClerkProvider>
+    </QueryClientProvider>
   );
 }

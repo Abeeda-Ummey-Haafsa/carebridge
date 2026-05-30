@@ -23,8 +23,6 @@ declare interface MapProps {
   onMapReady?: () => void;
 }
 
-
-
 declare interface ButtonProps extends TouchableOpacityProps {
   title: string;
   bgVariant?: "primary" | "secondary" | "danger" | "outline" | "success";
@@ -60,7 +58,6 @@ declare interface InputFieldProps extends TextInputProps {
   iconStyle?: string;
   className?: string;
 }
-
 
 declare interface LocationStore {
   userLatitude: number | null;
@@ -102,7 +99,6 @@ declare interface DriverCardProps {
   selected: number;
   setSelected: () => void;
 }
-<<<<<<< Updated upstream
 
 declare interface User {
   id: number | string;
@@ -112,5 +108,3 @@ declare interface User {
   role: UserRole;
   created_at: string;
 }
-=======
->>>>>>> Stashed changes

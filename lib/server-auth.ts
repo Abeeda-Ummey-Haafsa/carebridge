@@ -55,6 +55,18 @@ export interface ElderAuthContext {
   elder: AuthElder;
 }
 
+export interface RelativeAuthContext {
+  user: AuthUser;
+}
+
+export async function requireAuth(
+  request: Request,
+): Promise<RelativeAuthContext> {
+  const user = await getAuthenticatedUser(request);
+
+  return { user };
+}
+
 export async function getAuthenticatedUser(
   request: Request,
 ): Promise<AuthUser> {
@@ -123,4 +135,45 @@ export async function requireElder(
   }
 
   return { user, elder: rows[0] };
+}
+
+export async function requireRelative(
+  request: Request,
+): Promise<RelativeAuthContext> {
+  const user = await getAuthenticatedUser(request);
+
+  if (user.role !== "relative") {
+    throw new ApiAuthError(403, "Access restricted to relatives");
+  }
+
+  return { user };
+}
+
+export async function requireRelativeOwnership(
+  relativeUserId: number,
+  elderId: number,
+): Promise<void> {
+  const rows = await db<{ elder_id: number }>`
+    SELECT 1 AS elder_id
+    FROM   elder_relative_links
+    WHERE  elder_id = ${elderId}
+    AND    relative_user_id = ${relativeUserId}
+    LIMIT  1
+  `;
+
+  if (rows.length === 0) {
+    throw new ApiAuthError(403, "You do not have access to this elder");
+  }
+}
+
+export async function getRelativeElderIds(
+  relativeUserId: number,
+): Promise<number[]> {
+  const rows = await db<{ elder_id: number }>`
+    SELECT elder_id
+    FROM   elder_relative_links
+    WHERE  relative_user_id = ${relativeUserId}
+  `;
+
+  return rows.map((row) => row.elder_id);
 }

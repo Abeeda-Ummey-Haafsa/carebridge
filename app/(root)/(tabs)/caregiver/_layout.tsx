@@ -1,5 +1,5 @@
-import React from "react";
-import { Image, View, Text, StyleSheet } from "react-native";
+import React, { useEffect } from "react";
+import { Image, View, Text, StyleSheet, Alert } from "react-native";
 import { Tabs } from "expo-router";
 import { icons } from "@/constants";
 
@@ -32,7 +32,36 @@ const TabIcon = ({ icon, color, name, focused }: TabIconProps) => {
   );
 };
 
+import { useSetAuthToken, fetchAPI } from "@/lib/fetch";
+import { useCaregiverStore } from "@/store/caregiverStore";
+import { useAuth } from "@clerk/clerk-expo";
+
 const CaregiverTabLayout = () => {
+  useSetAuthToken();
+  const { isSignedIn } = useAuth();
+  const setProfile = useCaregiverStore((s) => s.setProfile);
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetchAPI("/api/caregivers/me");
+        if (mounted && res?.data) {
+          setProfile(res.data);
+        }
+      } catch (e: any) {
+        console.error("prefetch caregiver profile", e);
+        try {
+          Alert.alert("Failed to load profile");
+        } catch {}
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [isSignedIn, setProfile]);
+
   return (
     <Tabs
       screenOptions={{

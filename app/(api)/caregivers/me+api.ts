@@ -6,60 +6,48 @@ export async function GET(request: Request) {
   try {
     const { user, caregiver } = await requireCaregiver(request);
 
-    // Run additional queries in parallel
-    const [
-      caregiverRows,
-      certificationsRows,
-      availabilityRows,
-      notificationRows,
-      statsRows
-    ] = await Promise.all([
-      db<any>`
+    // Run the core profile queries in parallel.
+    const [caregiverRows, certificationsRows, availabilityRows, statsRows] =
+      await Promise.all([
+        db<any>`
         SELECT c.*, u.name, u.email
         FROM caregivers c
         JOIN users u ON c.user_id = u.id
         WHERE c.id = ${caregiver.id}
       `,
-      db<any>`
+        db<any>`
         SELECT *
         FROM caregiver_certifications
         WHERE caregiver_id = ${caregiver.id}
       `,
-      db<any>`
+        db<any>`
         SELECT *
         FROM caregiver_availability
         WHERE caregiver_id = ${caregiver.id}
       `,
-      db<{ count: number }>`
-        SELECT CAST(COUNT(*) AS INTEGER) as count
-        FROM notifications
-        WHERE user_id = ${user.id} AND is_read = false
-      `,
-      db<{ total_completed: number }>`
+        db<{ total_completed: number }>`
         SELECT CAST(COUNT(*) AS INTEGER) as total_completed
         FROM care_sessions
         WHERE caregiver_id = ${caregiver.id} AND status = 'completed'
-      `
-    ]);
+      `,
+      ]);
 
     if (caregiverRows.length === 0) {
       return Response.json({ error: "Caregiver not found" }, { status: 404 });
     }
 
     const caregiverData = caregiverRows[0];
-    const unread_notifications = notificationRows[0]?.count || 0;
     const total_completed_sessions = statsRows[0]?.total_completed || 0;
 
     const data = {
       ...caregiverData,
       certifications: certificationsRows,
       availability: availabilityRows,
-      unread_notifications,
       quick_stats: {
         total_completed_sessions,
         avg_rating: caregiverData.avg_rating,
-        response_rate: 100 // placeholder since mock doesn't define response logic natively
-      }
+        response_rate: 100, // placeholder since mock doesn't define response logic natively
+      },
     };
 
     return Response.json({ success: true, data }, { status: 200 });
@@ -87,16 +75,23 @@ export async function PATCH(request: Request) {
 
     // Validation rules
     if (body.hourly_rate !== undefined) {
-      if (typeof body.hourly_rate !== 'number' || body.hourly_rate <= 0 || body.hourly_rate > 999.99) {
-        return Response.json({ error: "hourly_rate must be between 0 and 999.99" }, { status: 400 });
+      if (
+        typeof body.hourly_rate !== "number" ||
+        body.hourly_rate <= 0 ||
+        body.hourly_rate > 999.99
+      ) {
+        return Response.json(
+          { error: "hourly_rate must be between 0 and 999.99" },
+          { status: 400 },
+        );
       }
     }
 
     if (body.care_types !== undefined && Array.isArray(body.care_types)) {
-        const allowedTypes = ["companion", "personal", "nursing", "specialized"];
-        if (!body.care_types.every((t: string) => allowedTypes.includes(t))) {
-          return Response.json({ error: "Invalid care_types" }, { status: 400 });
-        }
+      const allowedTypes = ["companion", "personal", "nursing", "specialized"];
+      if (!body.care_types.every((t: string) => allowedTypes.includes(t))) {
+        return Response.json({ error: "Invalid care_types" }, { status: 400 });
+      }
     }
 
     // Default to existing values if not provided

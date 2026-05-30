@@ -7,72 +7,133 @@ import {
   TouchableOpacity,
   RefreshControl,
   StyleSheet,
-  Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { icons } from "@/constants";
-import { create } from "zustand";
-import { useUserStore } from "@/store";
+import { useCaregiver } from "@/hooks/useCaregiver";
+import { useActiveSession } from "@/hooks/useActiveSession";
+import { useNearbyRequests } from "@/hooks/useNearbyRequests";
+import { useTodaySchedule } from "@/hooks/useTodaySchedule";
+import { useCheckOut } from "@/hooks/useCheckOut";
 
-interface CaregiverState {
-  isAvailable: boolean;
-  toggleAvailability: () => void;
-}
-
-export const useCaregiverStore = create<CaregiverState>((set) => ({
-  isAvailable: true,
-  toggleAvailability: () =>
-    set((state) => ({ isAvailable: !state.isAvailable })),
-}));
-
-// Mock Data
-const activeSessionMock = {
-  elderName: "Elena Rodriguez",
-  sessionType: "Medical Care",
-  duration: "2 hrs",
-  elapsedText: "01:14:23",
-};
-
-const requestsMock = [
-  {
-    id: "1",
-    elderName: "Arthur Pendelton",
-    careType: "Companionship",
-    time: "Tomorrow, 2:00 PM",
-    distance: "2.4 mi away",
-  },
-];
-
-const scheduleMock = [
-  {
-    id: "1",
-    timeFrame: "09:00 AM - 11:00 AM",
-    elderName: "Elena Rodriguez",
-    sessionType: "Medical Care",
-    status: "In Progress",
-  },
-];
-
-export default function Home() {
-  const { isAvailable, toggleAvailability } = useCaregiverStore();
-  const { user } = useUserStore();
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
+function ElapsedTimer({ checkedInAt }: { checkedInAt: string | null }) {
+  const [elapsed, setElapsed] = useState("00:00:00");
 
   useEffect(() => {
-    // Simulate loading for early fetch
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-  }, []);
+    if (!checkedInAt) {
+      setElapsed("00:00:00");
+      return;
+    }
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    // Simulate refresh
-    setTimeout(() => setRefreshing(false), 1500);
+    const anchor = new Date(checkedInAt).getTime();
+    const tick = () => {
+      const diffMs = Date.now() - anchor;
+      const totalSec = Math.floor(diffMs / 1000);
+      const hrs = Math.floor(totalSec / 3600)
+        .toString()
+        .padStart(2, "0");
+      const mins = Math.floor((totalSec % 3600) / 60)
+        .toString()
+        .padStart(2, "0");
+      const secs = (totalSec % 60).toString().padStart(2, "0");
+      setElapsed(`${hrs}:${mins}:${secs}`);
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [checkedInAt]);
+
+  return <Text style={styles.timer}>{elapsed}</Text>;
+}
+
+function formatScheduledAt(
+  isoString: string,
+  durationMinutes?: number,
+): string {
+  const start = new Date(isoString);
+  const startLabel = start.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (!durationMinutes) return startLabel;
+
+  const end = new Date(start.getTime() + durationMinutes * 60_000);
+  const endLabel = end.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return `${startLabel} – ${endLabel}`;
+}
+
+function formatStatus(status: string): string {
+  const map: Record<string, string> = {
+    pending: "Pending",
+    accepted: "Confirmed",
+    arriving: "En Route",
+    checked_in: "In Progress",
+    paused: "Paused",
+    completed: "Completed",
+    cancelled: "Cancelled",
+    declined: "Declined",
   };
 
-  if (loading) {
+  return map[status] ?? status;
+}
+
+export default function Home() {
+  const {
+    caregiver,
+    isLoading: profileLoading,
+    refetch: refetchProfile,
+  } = useCaregiver();
+
+  const {
+    activeSession,
+    hasActiveSession,
+    isLoading: sessionLoading,
+    refetch: refetchSession,
+  } = useActiveSession();
+
+  const {
+    requests,
+    isLoading: requestsLoading,
+    refetch: refetchRequests,
+    acceptRequest,
+    declineRequest,
+    isAccepting,
+    isDeclining,
+  } = useNearbyRequests();
+
+  const {
+    schedule,
+    isLoading: scheduleLoading,
+    refetch: refetchSchedule,
+  } = useTodaySchedule();
+
+  const { confirmCheckOut, isCheckingOut } = useCheckOut(
+    activeSession?.sessionId ?? 0,
+  );
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const isInitialLoading = profileLoading && !caregiver;
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      refetchProfile(),
+      refetchSession(),
+      refetchRequests(),
+      refetchSchedule(),
+    ]);
+    setRefreshing(false);
+  };
+
+  if (isInitialLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -91,107 +152,186 @@ export default function Home() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Image source={icons.profile} style={styles.profileImage} />
             <View>
               <Text style={styles.greeting}>
-                Hi, {user?.name?.split(" ")[0] || "Caregiver"}
+                Hi, {caregiver?.name?.trim().split(/\s+/)[0] ?? "Caregiver"}
               </Text>
-              <Text style={styles.subGreeting}>Ready for today?</Text>
+              <Text style={styles.subGreeting}>
+                {caregiver?.is_available ? "You're online ✓" : "You're Online"}
+              </Text>
             </View>
           </View>
+
           <View style={styles.headerRight}>
-            <Switch
-              value={isAvailable}
-              onValueChange={toggleAvailability}
-              trackColor={{ false: "#ccc", true: "#a0bff0" }}
-              thumbColor={isAvailable ? "#1fb299" : "#f4f3f4"}
-            />
-            <TouchableOpacity style={styles.notificationBtn}>
-              <Image
-                source={icons.notification}
-                style={styles.notificationIcon}
-              />
-              <View style={styles.badge} />
-            </TouchableOpacity>
+            <View
+              style={[
+                styles.statusPill,
+                caregiver?.is_available
+                  ? styles.statusPillOn
+                  : styles.statusPillOff,
+              ]}
+            >
+              <Text style={styles.statusPillText}>
+                {caregiver?.is_available ? "Online" : "Online"}
+              </Text>
+            </View>
           </View>
         </View>
 
-        {/* Active Session Card */}
-        <View style={styles.activeSessionCard}>
-          <View style={styles.activeSessionHeader}>
-            <View style={styles.activeDot} />
-            <Text style={styles.activeSessionText}>ACTIVE SESSION</Text>
-          </View>
-          <View style={styles.activeSessionBody}>
-            <View>
-              <Text style={styles.elderName}>
-                {activeSessionMock.elderName}
-              </Text>
-              <Text style={styles.sessionType}>
-                {activeSessionMock.sessionType} • {activeSessionMock.duration}
-              </Text>
+        {hasActiveSession && activeSession ? (
+          <View style={styles.activeSessionCard}>
+            <View style={styles.activeSessionHeader}>
+              <View style={styles.activeDot} />
+              <Text style={styles.activeSessionText}>ACTIVE SESSION</Text>
             </View>
-            <View style={styles.timerContainer}>
-              <Text style={styles.timer}>{activeSessionMock.elapsedText}</Text>
-              <Text style={styles.timerLabel}>Elapsed Time</Text>
+            <View style={styles.activeSessionBody}>
+              <View>
+                <Text style={styles.elderName}>{activeSession.elder_name}</Text>
+                <Text style={styles.sessionType}>
+                  {activeSession.care_type} • {activeSession.duration_minutes}{" "}
+                  min
+                </Text>
+              </View>
+              <View style={styles.timerContainer}>
+                <ElapsedTimer checkedInAt={activeSession.checked_in_at} />
+                <Text style={styles.timerLabel}>Elapsed Time</Text>
+              </View>
+            </View>
+            <View style={styles.activeSessionActions}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.checkOutBtn]}
+                onPress={confirmCheckOut}
+                disabled={isCheckingOut}
+              >
+                <Text style={styles.checkOutBtnText}>
+                  {isCheckingOut ? "Checking Out..." : "Check Out"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.notesBtn]}
+                onPress={() =>
+                  router.push(
+                    `/(root)/(tabs)/caregiver/active-session?id=${activeSession.sessionId}`,
+                  )
+                }
+              >
+                <Text style={styles.notesBtnText}>Notes</Text>
+              </TouchableOpacity>
             </View>
           </View>
-          <View style={styles.activeSessionActions}>
-            <TouchableOpacity style={[styles.actionButton, styles.checkOutBtn]}>
-              <Text style={styles.checkOutBtnText}>Check Out</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, styles.notesBtn]}>
-              <Text style={styles.notesBtnText}>Notes</Text>
-            </TouchableOpacity>
+        ) : !sessionLoading ? (
+          <View style={[styles.activeSessionCard, { opacity: 0.6 }]}>
+            <View style={styles.activeSessionHeader}>
+              <View style={[styles.activeDot, { backgroundColor: "#ccc" }]} />
+              <Text style={styles.activeSessionText}>NO ACTIVE SESSION</Text>
+            </View>
+            <Text style={{ color: "#fff", fontSize: 14 }}>
+              Accept a request below to start a session.
+            </Text>
           </View>
-        </View>
+        ) : null}
 
-        {/* New Requests Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>New Requests</Text>
-          <View style={styles.requestBadge}>
-            <Text style={styles.requestBadgeText}>{requestsMock.length}</Text>
-          </View>
+          {requestsLoading ? (
+            <View style={styles.requestBadge}>
+              <Text style={styles.requestBadgeText}>...</Text>
+            </View>
+          ) : (
+            <View style={styles.requestBadge}>
+              <Text style={styles.requestBadgeText}>{requests.length}</Text>
+            </View>
+          )}
         </View>
 
-        {requestsMock.map((req) => (
+        {requestsLoading && requests.length === 0 && (
+          <View style={[styles.requestCard, { height: 120, opacity: 0.4 }]} />
+        )}
+
+        {!requestsLoading && requests.length === 0 && (
+          <View style={styles.requestCard}>
+            <Text style={{ color: "#888", textAlign: "center", padding: 16 }}>
+              No pending requests nearby
+            </Text>
+          </View>
+        )}
+
+        {requests.map((req) => (
           <View key={req.id} style={styles.requestCard}>
             <View style={styles.requestInfo}>
               <Image source={icons.woman} style={styles.requestAvatar} />
-              <View>
-                <Text style={styles.requestName}>{req.elderName}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.requestName}>{req.elder_name}</Text>
                 <Text style={styles.requestType}>
-                  {req.careType} • {req.time}
+                  {req.care_type} • {formatScheduledAt(req.scheduled_at)}
                 </Text>
                 <View style={styles.locationContainer}>
                   <Image source={icons.pin} style={styles.pinIcon} />
-                  <Text style={styles.requestDistance}>{req.distance}</Text>
+                  <Text style={styles.requestDistance}>
+                    {req.distance_km != null
+                      ? `${req.distance_km.toFixed(1)} km away`
+                      : "Nearby"}
+                  </Text>
                 </View>
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: "#1fb299",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Est. ${req.estimated_pay.toFixed(2)}
+                </Text>
               </View>
             </View>
             <View style={styles.requestActions}>
-              <TouchableOpacity style={styles.declineBtn}>
+              <TouchableOpacity
+                style={styles.declineBtn}
+                onPress={() => declineRequest(req.id)}
+                disabled={isDeclining}
+              >
                 <Text style={styles.declineText}>Decline</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.acceptBtn}>
-                <Text style={styles.acceptText}>Accept</Text>
+              <TouchableOpacity
+                style={styles.acceptBtn}
+                onPress={() => acceptRequest(req.id)}
+                disabled={isAccepting}
+              >
+                <Text style={styles.acceptText}>
+                  {isAccepting ? "..." : "Accept"}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
         ))}
 
-        {/* Today's Schedule */}
         <View style={[styles.sectionHeader, { marginTop: 10 }]}>
           <Text style={styles.sectionTitle}>Today's Schedule</Text>
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              router.push("/(root)/(tabs)/caregiver/session-history")
+            }
+          >
             <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
         </View>
 
-        {scheduleMock.map((sched) => (
+        {scheduleLoading && schedule.length === 0 && (
+          <View style={[styles.scheduleCard, { height: 100, opacity: 0.4 }]} />
+        )}
+
+        {!scheduleLoading && schedule.length === 0 && (
+          <View style={styles.scheduleCard}>
+            <Text style={{ color: "#888", padding: 16 }}>
+              No sessions scheduled for today
+            </Text>
+          </View>
+        )}
+
+        {schedule.map((sched) => (
           <View key={sched.id} style={styles.scheduleCard}>
             <View style={styles.scheduleTimeline}>
               <View style={styles.timelineDot} />
@@ -199,12 +339,26 @@ export default function Home() {
             </View>
             <View style={styles.scheduleContent}>
               <View style={styles.scheduleHeaderRow}>
-                <Text style={styles.scheduleTime}>{sched.timeFrame}</Text>
-                <Text style={styles.scheduleStatus}>{sched.status}</Text>
+                <Text style={styles.scheduleTime}>
+                  {formatScheduledAt(
+                    sched.scheduled_at,
+                    sched.duration_minutes,
+                  )}
+                </Text>
+                <Text style={styles.scheduleStatus}>
+                  {formatStatus(sched.status)}
+                </Text>
               </View>
-              <Text style={styles.scheduleName}>{sched.elderName}</Text>
-              <Text style={styles.scheduleCareType}>{sched.sessionType}</Text>
-              <TouchableOpacity style={styles.navigateBtn}>
+              <Text style={styles.scheduleName}>{sched.elder_name}</Text>
+              <Text style={styles.scheduleCareType}>{sched.care_type}</Text>
+              <TouchableOpacity
+                style={styles.navigateBtn}
+                onPress={() =>
+                  router.push(
+                    `/(root)/(tabs)/caregiver/active-session?id=${sched.id}`,
+                  )
+                }
+              >
                 <Image
                   source={icons.map}
                   style={styles.navigateIcon}
@@ -276,28 +430,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
-  notificationBtn: {
-    position: "relative",
+  statusPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  statusPillOn: {
+    backgroundColor: "rgba(31, 178, 153, 0.18)",
+  },
+  statusPillOff: {
     backgroundColor: "rgba(255,255,255,0.15)",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
   },
-  notificationIcon: {
-    width: 20,
-    height: 20,
-    tintColor: "#fff",
-  },
-  badge: {
-    position: "absolute",
-    top: 10,
-    right: 12,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#ef4444",
+  statusPillText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
   },
   activeSessionCard: {
     backgroundColor: "#1fb299",
@@ -422,6 +569,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     marginBottom: 16,
+    alignItems: "flex-start",
   },
   requestAvatar: {
     width: 48,
@@ -494,6 +642,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 16,
     marginTop: 4,
+    width: 12,
   },
   timelineDot: {
     width: 12,
@@ -514,11 +663,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 8,
+    gap: 8,
   },
   scheduleTime: {
     fontSize: 12,
     color: "#1fb299",
     fontWeight: "bold",
+    flexShrink: 1,
   },
   scheduleStatus: {
     fontSize: 10,
@@ -527,6 +678,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
+    alignSelf: "flex-start",
   },
   scheduleName: {
     fontSize: 16,
